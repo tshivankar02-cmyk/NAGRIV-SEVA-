@@ -1,0 +1,272 @@
+{% extends "worker_base.html" %}
+
+{% block title %}Task #{{ task.id }} — Repair Report{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <!-- Back Link & Task Title -->
+  <div class="col-12 d-flex justify-content-between align-items-center">
+    <a href="{{ url_for('worker_dashboard') }}" class="btn btn-outline-secondary btn-sm rounded-pill">
+      <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+    </a>
+    <span class="badge-status badge-{{ task.status.lower() if task.status else 'assigned' }} fs-6">
+      Status: {{ task.status.replace('_', ' ') if task.status else 'ASSIGNED' }}
+    </span>
+  </div>
+
+  <!-- Left Column: Issue Information & Before Image -->
+  <div class="col-12 col-lg-5">
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+      <div class="card-header bg-dark text-white p-3 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0"><i class="fas fa-exclamation-triangle text-warning me-2"></i> Issue #{{ task.id }}</h5>
+        <span class="badge bg-warning text-dark fw-bold">{{ task.department or worker.department }}</span>
+      </div>
+
+      <div class="card-body p-4">
+        <!-- Before Image View -->
+        <div class="mb-3 text-center">
+          <label class="form-label fw-bold text-muted small text-uppercase mb-2 d-block">Original Civic Complaint (Before Repair)</label>
+          {% if task.image_path %}
+            <img src="{{ task.image_path if task.image_path.startswith('/') else '/' + task.image_path }}" alt="Original Issue" class="img-fluid rounded-3 shadow-sm" style="max-height: 300px; width: 100%; object-fit: cover;" onerror="this.src='https://via.placeholder.com/500x300?text=Original+Report+Photo';">
+          {% else %}
+            <div class="bg-light p-4 rounded text-muted">No Image Available</div>
+          {% endif %}
+        </div>
+
+        <h4 class="fw-bold text-dark mb-3">{{ task.damage_label }}</h4>
+
+        <div class="bg-light rounded-3 p-3 mb-3 small">
+          <div class="row g-2">
+            <div class="col-6">
+              <span class="text-muted d-block fs-8 fw-semibold">SEVERITY</span>
+              <span class="badge bg-{{ 'danger' if 'High' in task.severity else ('warning text-dark' if 'Medium' in task.severity else 'info text-dark') }} rounded-pill">
+                {{ task.severity or 'Medium' }}
+              </span>
+            </div>
+            <div class="col-6">
+              <span class="text-muted d-block fs-8 fw-semibold">ASSIGNED WARD</span>
+              <span class="fw-bold text-dark">{{ worker.ward }}</span>
+            </div>
+            <div class="col-6">
+              <span class="text-muted d-block fs-8 fw-semibold">REPORT DATE</span>
+              <span class="fw-semibold text-dark">{{ task.created_at[:10] if task.created_at else 'Recent' }}</span>
+            </div>
+            <div class="col-6">
+              <span class="text-muted d-block fs-8 fw-semibold">COORDINATES</span>
+              <span class="fw-mono text-secondary fs-8">
+                {% if task.latitude and task.longitude %}
+                  {{ "%.4f"|format(task.latitude) }}, {{ "%.4f"|format(task.longitude) }}
+                {% else %}
+                  Location Marked
+                {% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {% if task.class_confidences %}
+        <div class="alert alert-info py-2 px-3 mb-0 fs-8 border-0 rounded-3">
+          <i class="fas fa-robot me-1 text-primary"></i> <strong>AI Detection Info:</strong> {{ task.class_confidences }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: Status Controls & Repair Submission Form -->
+  <div class="col-12 col-lg-7">
+
+    <!-- Case 1: Status is ASSIGNED (Needs Start Repair) -->
+    {% if not task.status or task.status == 'ASSIGNED' %}
+    <div class="card border-0 shadow-sm rounded-4 p-4 text-center bg-white mb-4">
+      <div class="d-inline-flex align-items-center justify-content-center bg-warning-subtle text-warning rounded-circle mb-3 mx-auto" style="width: 70px; height: 70px; font-size: 2rem;">
+        <i class="fas fa-tools"></i>
+      </div>
+      <h4 class="fw-bold text-dark">Ready to Begin Field Repair?</h4>
+      <p class="text-muted small max-w-md mx-auto mb-4">
+        Clicking <strong>"Start Repair"</strong> will update this task status to <span class="badge bg-warning text-dark">IN_PROGRESS</span> and open the Repair Documentation & After-Image submission form.
+      </p>
+      <form action="{{ url_for('worker_start_task', task_id=task.id) }}" method="POST">
+        <button type="submit" class="btn btn-warning btn-lg px-5 fw-bold rounded-pill shadow-sm">
+          <i class="fas fa-play me-2"></i> Start Repair Task
+        </button>
+      </form>
+    </div>
+    {% endif %}
+
+    <!-- Case 2: Status is IN_PROGRESS or PENDING_VERIFICATION (Repair Form) -->
+    {% if task.status in ['IN_PROGRESS', 'PENDING_VERIFICATION', 'RESOLVED', 'COMPLETED'] %}
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+      <div class="card-header bg-primary text-white p-3" style="background: linear-gradient(135deg, #1e3a8a 0%, #0f766e 100%);">
+        <h5 class="fw-bold mb-0"><i class="fas fa-clipboard-check me-2"></i> Field Repair Report Form</h5>
+      </div>
+
+      <div class="card-body p-4 bg-white">
+        
+        <form action="{{ url_for('worker_submit_repair', task_id=task.id) }}" method="POST" enctype="multipart/form-data" id="repairReportForm">
+          
+          <!-- Hidden Inputs for Form Processing -->
+          <input type="hidden" name="problems_faced" id="problems_faced_hidden" value="{{ repair_report.problems_faced if repair_report else '' }}">
+          <input type="hidden" name="tools_used" id="tools_used_hidden" value="{{ repair_report.tools_used if repair_report else '' }}">
+          <input type="hidden" name="team_members" id="team_members_hidden" value="{{ repair_report.team_members if repair_report else '' }}">
+          <input type="hidden" name="after_image_base64" id="after_image_base64" value="">
+
+          <!-- SECTION 1: AFTER-REPAIR IMAGE UPLOAD (MANDATORY FEATURE) -->
+          <div class="mb-4 p-3 bg-light rounded-3 border">
+            <label class="form-label fw-bold text-dark fs-6 d-flex align-items-center justify-content-between mb-2">
+              <span><i class="fas fa-camera text-danger me-2"></i> After-Repair Image Upload <span class="text-danger">*</span></span>
+              <span class="badge bg-danger">Mandatory</span>
+            </label>
+            <p class="text-muted fs-8 mb-3">Upload a clear photo showing the completed repair or current site status.</p>
+
+            <!-- Image Upload Dropzone -->
+            <div class="image-upload-zone mb-3" id="imageDropZone">
+              <i class="fas fa-cloud-upload-alt fs-1 text-primary mb-2"></i>
+              <div class="fw-bold text-dark">Click or Drag & Drop After-Repair Photo</div>
+              <small class="text-muted d-block">Supports JPG, PNG, WEBP (Max 10MB)</small>
+              <input type="file" class="d-none" id="after_image" name="after_image" accept="image/jpeg,image/png,image/webp">
+            </div>
+
+            <!-- Live Camera Capture Button -->
+            <div class="text-center mb-3">
+              <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-4" id="startCameraBtn">
+                <i class="fas fa-video me-1"></i> Capture Photo with Camera
+              </button>
+            </div>
+
+            <!-- Image Preview Container -->
+            <div id="uploadPreviewContainer" class="{% if not repair_report or not repair_report.after_image_path %}d-none{% endif %} text-center">
+              <div class="position-relative d-inline-block">
+                <img id="previewImg" src="{{ repair_report.after_image_path if repair_report else '' }}" alt="After Preview" class="upload-preview-img border border-3 border-success">
+                <button type="button" id="removeImgBtn" class="btn btn-danger btn-sm rounded-circle position-absolute top-0 end-0 m-2" title="Remove Photo">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+              <div class="small text-success fw-bold mt-2"><i class="fas fa-check-circle me-1"></i> After-Repair Photo Ready</div>
+            </div>
+          </div>
+
+          <!-- SECTION 2: PROBLEMS FACED DURING REPAIR -->
+          <div class="mb-4">
+            <label class="form-label fw-bold text-dark fs-6">
+              <i class="fas fa-exclamation-circle text-warning me-2"></i> Problems / Difficulties Faced During Repair
+            </label>
+            <p class="text-muted fs-8 mb-2">Select common challenges encountered or write custom notes:</p>
+
+            <div class="tag-selector-group mb-2">
+              {% set presets = ["Heavy traffic condition", "Required equipment unavailable", "Damage larger than initial report", "Weather delay", "Location inaccessible", "Additional manpower needed"] %}
+              {% set current_problems = repair_report.problems_faced if repair_report and repair_report.problems_faced else '' %}
+              {% for item in presets %}
+                <input type="checkbox" class="tag-checkbox problem-checkbox" id="prob_{{ loop.index }}" value="{{ item }}" {% if item in current_problems %}checked{% endif %}>
+                <label for="prob_{{ loop.index }}" class="tag-label">{{ item }}</label>
+              {% endfor %}
+            </div>
+
+            <textarea class="form-control rounded-3 fs-7" id="problems_faced_text" rows="2" placeholder="Describe any additional obstacles faced..."></textarea>
+          </div>
+
+          <!-- SECTION 3: TOOLS & EQUIPMENT USED -->
+          <div class="mb-4">
+            <label class="form-label fw-bold text-dark fs-6">
+              <i class="fas fa-wrench text-info me-2"></i> Tools & Equipment Used
+            </label>
+
+            <div class="tag-selector-group mb-2" id="toolsSelectorGroup">
+              {% set tool_presets = ["Shovel", "Pickaxe", "Safety Cones", "Barricades", "Asphalt Roller", "Garbage Collection Truck", "Water Pump", "Welding Equipment", "Electrical Multimeter", "PPE Safety Gear"] %}
+              {% set current_tools = repair_report.tools_used if repair_report and repair_report.tools_used else '' %}
+              {% for tool in tool_presets %}
+                <input type="checkbox" class="tag-checkbox tool-checkbox" id="tool_{{ loop.index }}" value="{{ tool }}" {% if tool in current_tools %}checked{% endif %}>
+                <label for="tool_{{ loop.index }}" class="tag-label">{{ tool }}</label>
+              {% endfor %}
+            </div>
+
+            <!-- Custom Tool Input -->
+            <div class="input-group input-group-sm max-w-md">
+              <input type="text" class="form-control rounded-start-pill" id="customToolInput" placeholder="Add custom tool name...">
+              <button type="button" class="btn btn-outline-primary rounded-end-pill px-3" id="addCustomToolBtn">
+                <i class="fas fa-plus me-1"></i> Add Tool
+              </button>
+            </div>
+          </div>
+
+          <!-- SECTION 4: TEAM MEMBERS INVOLVED -->
+          <div class="mb-4">
+            <label class="form-label fw-bold text-dark fs-6">
+              <i class="fas fa-users text-primary me-2"></i> Team Members Involved
+            </label>
+
+            <div class="tag-selector-group mb-2">
+              {% set current_team = repair_report.team_members if repair_report and repair_report.team_members else '' %}
+              {% for w in all_workers %}
+                <input type="checkbox" class="tag-checkbox team-checkbox" id="team_w_{{ w.id }}" value="{{ w.name }} ({{ w.worker_id }})" {% if w.name in current_team %}checked{% endif %}>
+                <label for="team_w_{{ w.id }}" class="tag-label">👷 {{ w.name }} <small class="opacity-75">({{ w.worker_id }})</small></label>
+              {% endfor %}
+            </div>
+
+            <input type="text" class="form-control form-control-sm rounded-3 fs-7" id="team_custom_text" placeholder="Add any external team members (comma separated)..." value="{{ current_team }}">
+          </div>
+
+          <!-- SECTION 5: WORKER REMARKS -->
+          <div class="mb-4">
+            <label for="worker_remarks" class="form-label fw-bold text-dark fs-6">
+              <i class="fas fa-comment-dots text-secondary me-2"></i> Worker Remarks / Completion Summary
+            </label>
+            <textarea class="form-control rounded-3 fs-7" id="worker_remarks" name="worker_remarks" rows="2" placeholder="e.g. Repair work successfully completed. Site cleared and traffic resumed.">{{ repair_report.worker_remarks if repair_report else '' }}</textarea>
+          </div>
+
+          <!-- SUBMIT BUTTON -->
+          <div class="pt-2">
+            <button type="submit" class="btn btn-success btn-lg w-100 fw-bold rounded-pill shadow">
+              <i class="fas fa-paper-plane me-2"></i> Submit Complete Repair Report
+            </button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Side-by-Side BEFORE | AFTER Image Comparison Preview Card -->
+    {% if repair_report and repair_report.after_image_path %}
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4 bg-dark text-white">
+      <div class="card-header bg-secondary bg-opacity-25 p-3">
+        <h5 class="fw-bold mb-0 text-warning"><i class="fas fa-images me-2"></i> BEFORE | AFTER Visual Evidence</h5>
+      </div>
+      <div class="card-body p-3">
+        <div class="comparison-grid">
+          <div class="comparison-box">
+            <div class="comparison-box-title title-before"><i class="fas fa-history me-1"></i> BEFORE REPAIR</div>
+            <img src="{{ task.image_path if task.image_path.startswith('/') else '/' + task.image_path }}" class="comparison-img" alt="Before">
+          </div>
+          <div class="comparison-box">
+            <div class="comparison-box-title title-after"><i class="fas fa-check-circle me-1"></i> AFTER REPAIR</div>
+            <img src="{{ repair_report.after_image_path }}" class="comparison-img" alt="After">
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<!-- Live Camera Modal -->
+<div class="modal fade" id="cameraModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 overflow-hidden">
+      <div class="modal-header bg-dark text-white">
+        <h5 class="modal-title fw-bold"><i class="fas fa-camera me-2 text-warning"></i> Capture Repair Photo</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body bg-black p-0 text-center">
+        <video id="cameraVideo" autoplay playsinline style="width: 100%; max-height: 400px; object-fit: cover;"></video>
+      </div>
+      <div class="modal-footer bg-dark justify-content-center">
+        <button type="button" class="btn btn-warning fw-bold rounded-pill px-4" id="capturePhotoBtn">
+          <i class="fas fa-circle me-2"></i> Take Snap & Save
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Worker Portal{% endblock %} — Nagrik-Seva Municipal Platform</title>
+  
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- FontAwesome & Google Fonts -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Worker Styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='worker.css') }}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="worker-body">
+
+  <!-- Desktop Web Header & Navigation Bar -->
+  <nav class="navbar navbar-expand-lg navbar-dark worker-navbar sticky-top">
+    <div class="container-fluid px-4">
+      <a class="worker-brand text-decoration-none" href="{{ url_for('worker_dashboard') }}">
+        <i class="fas fa-city text-warning fs-4"></i>
+        <div class="d-flex flex-column leading-none">
+          <span class="fs-5 fw-bold text-white">Nagrik-Seva</span>
+          <span class="fs-8 text-warning font-monospace fw-normal">Municipal Worker Platform</span>
+        </div>
+      </a>
+
+      <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#workerWebNavbar" aria-controls="workerWebNavbar" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      
+      <div class="collapse navbar-collapse" id="workerWebNavbar">
+        {% if current_worker %}
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4 gap-lg-1">
+          <li class="nav-item">
+            <a class="nav-link px-3 rounded-2 {% if request.path == url_for('worker_dashboard') %}active fw-bold text-white bg-white bg-opacity-10{% endif %}" href="{{ url_for('worker_dashboard') }}">
+              <i class="fas fa-chart-line me-1"></i> Dashboard
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link px-3 rounded-2 {% if 'tasks' in request.path %}active fw-bold text-white bg-white bg-opacity-10{% endif %}" href="{{ url_for('worker_tasks', status='assigned') }}">
+              <i class="fas fa-tasks me-1"></i> Assigned Tasks
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link px-3 rounded-2 {% if request.path == url_for('worker_history') %}active fw-bold text-white bg-white bg-opacity-10{% endif %}" href="{{ url_for('worker_history') }}">
+              <i class="fas fa-check-double me-1"></i> Completed Work
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link px-3 rounded-2 {% if request.path == url_for('worker_profile') %}active fw-bold text-white bg-white bg-opacity-10{% endif %}" href="{{ url_for('worker_profile') }}">
+              <i class="fas fa-user-circle me-1"></i> Profile & Ward
+            </a>
+          </li>
+        </ul>
+
+        <div class="d-flex align-items-center gap-3 mt-3 mt-lg-0">
+          <a href="{{ url_for('worker_profile') }}" class="worker-profile-badge text-decoration-none">
+            {% if current_worker.profile_image %}
+              <img src="{{ current_worker.profile_image }}" alt="Avatar" class="worker-avatar-sm">
+            {% else %}
+              <div class="worker-avatar-sm bg-warning text-dark d-flex align-items-center justify-content-center fw-bold">
+                {{ current_worker.name[0] }}
+              </div>
+            {% endif %}
+            <div class="text-start">
+              <div class="fw-bold fs-7 text-white">{{ current_worker.name }}</div>
+              <small class="text-warning fs-8 font-monospace">{{ current_worker.worker_id }}</small>
+            </div>
+          </a>
+
+          <a href="/" class="btn btn-outline-light btn-sm rounded-3 px-3 ms-2" title="Switch to Citizen Portal">
+            <i class="fas fa-globe me-1"></i> Citizen Site
+          </a>
+
+          <a href="{{ url_for('worker_logout') }}" class="btn btn-danger btn-sm rounded-3 px-3" title="Logout">
+            <i class="fas fa-sign-out-alt me-1"></i> Logout
+          </a>
+        </div>
+        {% else %}
+        <div class="ms-auto d-flex align-items-center gap-2">
+          <a href="/" class="btn btn-outline-light btn-sm rounded-3 px-3">
+            <i class="fas fa-globe me-1"></i> Citizen Portal
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </nav>
+
+  <!-- Flash Notification Messages -->
+  <div class="container-fluid px-4 mt-3">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show shadow-sm rounded-3" role="alert">
+            <i class="fas fa-info-circle me-2"></i> {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+  </div>
+
+  <!-- Main Web Content Container -->
+  <main class="flex-grow-1 container-fluid px-4 py-3">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Desktop Web Footer -->
+  <footer class="worker-web-footer py-3 mt-auto bg-dark text-white-50 border-top border-secondary border-opacity-25">
+    <div class="container-fluid px-4 d-flex flex-column flex-md-row justify-content-between align-items-center fs-8">
+      <div>
+        <strong class="text-white">Nagrik-Seva Municipal Platform</strong> &copy; 2026. AI Smart City Civic Management System.
+      </div>
+      <div class="mt-2 mt-md-0">
+        <span class="me-3"><i class="fas fa-shield-alt text-warning me-1"></i> Field Worker Portal</span>
+        <span class="me-3"><i class="fas fa-server text-success me-1"></i> System Online</span>
+        <a href="/" class="text-warning text-decoration-none"><i class="fas fa-external-link-alt me-1"></i> Public Web Portal</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Bootstrap 5 JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Worker Custom JS -->
+  <script src="{{ url_for('static', filename='worker.js') }}"></script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>
