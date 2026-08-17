@@ -124,10 +124,34 @@ AI-Smart-City/
 *(Not yet implemented - planned for Future Enhancements)*
 - Future REST API for mobile app integration.
 
+**👷 Municipal Worker Panel**
+- Dedicated field worker dashboard & task management
+- Worker login & session-backed authorization
+- Problems faced, tools used, and team members tracking
+- After-repair photo upload & browser camera capture
+- Interactive BEFORE | AFTER visual evidence comparison
+
+## 🌐 Application Working URLs
+- **Citizen Detection Command Center**: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+- **Report History & Heatmap**: [http://127.0.0.1:8000/history](http://127.0.0.1:8000/history)
+- **AI Performance Analytics**: [http://127.0.0.1:8000/performance](http://127.0.0.1:8000/performance)
+- **Worker Portal Login**: [http://127.0.0.1:8000/worker/login](http://127.0.0.1:8000/worker/login)
+- **Worker Dashboard**: [http://127.0.0.1:8000/worker/dashboard](http://127.0.0.1:8000/worker/dashboard)
+- **Worker Profile**: [http://127.0.0.1:8000/worker/profile](http://127.0.0.1:8000/worker/profile)
+- **Worker Completed Work**: [http://127.0.0.1:8000/worker/history](http://127.0.0.1:8000/worker/history)
+
+### 🔑 Test Worker Accounts
+| Worker ID | Name | Department | Password |
+| :--- | :--- | :--- | :--- |
+| **`WRK-1024`** | Rahul Sharma | Roads & Infrastructure | `password123` |
+| **`WRK-1001`** | Suresh Kumar | Department of Environment | `password123` |
+| **`WRK-1005`** | Anita Patel | Sanitation | `password123` |
+| **`WRK-1010`** | Vikram Singh | General Municipal Services | `password123` |
+
 ## Installation
 **1️⃣ Install Dependencies**
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt psutil
 ```
 
 ## Usage
@@ -136,7 +160,7 @@ pip install -r requirements.txt
 python app.py
 ```
 **3️⃣ Open in Browser**
-http://127.0.0.1:5000
+http://127.0.0.1:8000
 
 ## Future Improvements
 **🚧 Future Enhancements**
